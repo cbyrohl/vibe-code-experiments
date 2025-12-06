@@ -119,24 +119,34 @@ TOTAL_FAILED=0
 TOTAL_RUN=0
 
 if [ $RUN_INTEL -eq 1 ]; then
-    ((TOTAL_RUN++))
+    TOTAL_RUN=$((TOTAL_RUN+1))
     if [ $INTEL_RESULT -eq 0 ]; then
         echo "✓ Intel oneAPI SYCL:  COMPLETE WORKFLOW PASSED"
-        ((TOTAL_PASSED++))
+        TOTAL_PASSED=$((TOTAL_PASSED+1))
     else
         echo "✗ Intel oneAPI SYCL:  WORKFLOW FAILED"
-        ((TOTAL_FAILED++))
+        TOTAL_FAILED=$((TOTAL_FAILED+1))
+    fi
+    # Print validation check summary if available
+    if [ -f "validate-intel/summary.txt" ]; then
+        echo "  Validation checks (Intel):"
+        sed 's/^/    - /' validate-intel/summary.txt
     fi
 fi
 
 if [ $RUN_ACPP -eq 1 ]; then
-    ((TOTAL_RUN++))
+    TOTAL_RUN=$((TOTAL_RUN+1))
     if [ $ACPP_RESULT -eq 0 ]; then
         echo "✓ AdaptiveCpp SYCL:   COMPLETE WORKFLOW PASSED"
-        ((TOTAL_PASSED++))
+        TOTAL_PASSED=$((TOTAL_PASSED+1))
     else
         echo "✗ AdaptiveCpp SYCL:   WORKFLOW FAILED"
-        ((TOTAL_FAILED++))
+        TOTAL_FAILED=$((TOTAL_FAILED+1))
+    fi
+    # Print validation check summary if available
+    if [ -f "validate-adaptivecpp/summary.txt" ]; then
+        echo "  Validation checks (AdaptiveCpp):"
+        sed 's/^/    - /' validate-adaptivecpp/summary.txt
     fi
 fi
 

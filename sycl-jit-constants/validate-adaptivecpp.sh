@@ -49,7 +49,7 @@ echo "=============================================="
 echo ""
 
 # Compiler flags for analysis
-ANALYSIS_FLAGS="-O3 -I../include"
+ANALYSIS_FLAGS="-std=c++20 -O3 -I../include"
 BACKEND_FLAGS="--acpp-targets=$ACPP_TARGETS"
 
 # AdaptiveCpp/Clang optimization reporting
@@ -264,6 +264,8 @@ int main() {
       data[i] = result;
     });
 
+  q.wait();  // Wait for kernel to complete before accessing results
+
   // Verify: should be i * 5
   bool correct = (data[0] == 0) && (data[1] == 5) && (data[10] == 50);
 
@@ -338,45 +340,59 @@ echo ""
 PASSED=0
 FAILED=0
 
+# Prepare machine-readable summary
+SUMMARY_FILE="summary.txt"
+> "$SUMMARY_FILE"
+
 # Check validation criteria
 if [ $BACKEND_RESULT -eq 0 ]; then
     echo "✓ Backend detection: CORRECT"
-    ((PASSED++))
+    echo "Backend detection: PASS" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "✗ Backend detection: FAILED"
-    ((FAILED++))
+    echo "Backend detection: FAIL" >> "$SUMMARY_FILE"
+    FAILED=$((FAILED+1))
 fi
 
 if [ $SPECIALIZED_RESULT -eq 0 ]; then
     echo "✓ sycl::specialized<T>: WORKING"
-    ((PASSED++))
+    echo "sycl::specialized<T>: PASS" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "✗ sycl::specialized<T>: FAILED"
-    ((FAILED++))
+    echo "sycl::specialized<T>: FAIL" >> "$SUMMARY_FILE"
+    FAILED=$((FAILED+1))
 fi
 
 if [ $TEST_RESULT -eq 0 ]; then
     echo "✓ Runtime validation: PASSED"
-    ((PASSED++))
+    echo "Runtime validation: PASS" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "✗ Runtime validation: FAILED"
-    ((FAILED++))
+    echo "Runtime validation: FAIL" >> "$SUMMARY_FILE"
+    FAILED=$((FAILED+1))
 fi
 
 if [ $OPT_RESULT -eq 0 ]; then
     echo "✓ Optimization test: PASSED"
-    ((PASSED++))
+    echo "Optimization test: PASS" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "✗ Optimization test: FAILED"
-    ((FAILED++))
+    echo "Optimization test: FAIL" >> "$SUMMARY_FILE"
+    FAILED=$((FAILED+1))
 fi
 
 if [ $INLINE_COUNT -gt 0 ]; then
     echo "✓ Compiler inlining: CONFIRMED ($INLINE_COUNT operations)"
-    ((PASSED++))
+    echo "Compiler inlining: PASS ($INLINE_COUNT operations)" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "⚠ Compiler inlining: NOT REPORTED (may still be happening)"
-    ((PASSED++))
+    echo "Compiler inlining: NOT REPORTED" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 fi
 
 echo ""
@@ -414,4 +430,28 @@ echo ""
 echo "=============================================="
 
 cd ..
+
+# Run performance benchmarks if validation passed
+if [ $EXIT_CODE -eq 0 ]; then
+    echo ""
+    echo "=============================================="
+    echo "Step 7: Performance Benchmarks (JIT vs AOT)"
+    echo "=============================================="
+    echo ""
+    echo "Running performance benchmarks to validate constant folding..."
+    echo ""
+
+    ./run-benchmark-adaptivecpp-comparison.sh
+    BENCHMARK_EXIT=$?
+
+    if [ $BENCHMARK_EXIT -eq 0 ]; then
+        echo ""
+        echo "✓ Performance benchmarks PASSED"
+    else
+        echo ""
+        echo "✗ Performance benchmarks FAILED"
+        EXIT_CODE=1
+    fi
+fi
+
 exit $EXIT_CODE

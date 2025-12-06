@@ -24,7 +24,7 @@ cd $BUILD_DIR
 # -Rpass-analysis=loop-vectorize : Report vectorization analysis
 # -fsave-optimization-record : Save optimization records to YAML
 # -gline-tables-only : Minimal debug info for better profiling
-EXTRA_FLAGS="-fsycl-device-code-split=per_kernel -Rpass=inline -Rpass-analysis=loop-vectorize -gline-tables-only"
+EXTRA_FLAGS="-std=c++20 -fsycl-device-code-split=per_kernel -Rpass=inline -Rpass-analysis=loop-vectorize -gline-tables-only"
 
 cmake .. \
     -DCMAKE_CXX_COMPILER=icpx \

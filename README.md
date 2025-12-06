@@ -8,7 +8,15 @@ Repository for various vibe coded experiments.
 
 ## Contents
 
-- `sycl-jit-constants/` - SYCL JIT constants across Intel oneAPI and AdaptiveCpp
+| Name                | Folder                 | Status |
+|---------------------|------------------------|:------:|
+| SYCL JIT Constants  | `sycl-jit-constants/`  | 🟡 |
+
+Status legend:
+- 🗒️: placeholder
+- 🛠️: work in progress (WIP)
+- 🟡: potentially successful (needs human evaluation)
+- ✅: successful (with human evaluation)
 
 ## Quick Start
 

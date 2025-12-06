@@ -1,0 +1,53 @@
+# Root ignore for vibe-code-experiments
+
+# Build trees (anywhere in repo)
+build*/
+cmake-build-*/
+build-adaptivecpp/
+build-intel/
+build-benchmark-*/
+
+# CMake artifacts (keep CMakeLists and source cmake modules)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+# Often generated locally by CMake tooling
+compile_commands.json
+
+# Compiled binaries / objects
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+sycl_jit_example
+
+# Validation / benchmark outputs
+validate-*/
+**/validate-*/
+validate_output.txt
+*.report
+*.csv
+*.jsonl
+
+# Logs / temp / caches
+*.log
+*.tmp
+*.cache
+.cache/
+*~
+*.swp
+*.swo
+
+# IDE / tooling
+.vscode/
+.idea/
+.claude/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+

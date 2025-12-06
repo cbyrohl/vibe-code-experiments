@@ -21,10 +21,24 @@ if [ ! -f "$ONEAPI_ROOT/setvars.sh" ]; then
     exit 1
 fi
 
-# Source Intel environment
+# Source Intel environment (robust, with diagnostics)
 echo "Sourcing Intel oneAPI environment..."
-source "$ONEAPI_ROOT/setvars.sh" > /dev/null 2>&1
-echo "✓ Intel oneAPI environment loaded"
+set +e
+source "$ONEAPI_ROOT/setvars.sh"
+SRC_RC=$?
+set -e
+# oneAPI setvars.sh returns 3 if already sourced; treat as OK
+if [ $SRC_RC -ne 0 ] && [ $SRC_RC -ne 3 ]; then
+    echo "Error: Failed to source $ONEAPI_ROOT/setvars.sh (exit $SRC_RC)"
+    echo "Hint: Ensure oneAPI is installed and try: source $ONEAPI_ROOT/setvars.sh"
+    exit 1
+fi
+if ! command -v icpx >/dev/null 2>&1; then
+    echo "Error: 'icpx' not found in PATH after sourcing oneAPI environment"
+    echo "Hint: Verify your oneAPI installation and environment setup"
+    exit 1
+fi
+echo "✓ Intel oneAPI environment loaded ($(icpx --version | head -1))"
 echo ""
 
 # Create validation directory
@@ -39,7 +53,7 @@ echo "=============================================="
 echo ""
 
 # Compiler flags for analysis
-ANALYSIS_FLAGS="-fsycl -O3 -I../include"
+ANALYSIS_FLAGS="-fsycl -std=c++20 -O3 -I../include"
 REPORT_FLAGS="-Rpass=inline -Rpass-analysis=loop-vectorize -Rpass-missed=inline"
 SAVE_TEMPS="-save-temps=obj"
 
@@ -110,13 +124,13 @@ if [ ! -z "$BC_FILES" ]; then
             echo "  Kernel found in: $ll_file"
 
             # Check for evidence of constant propagation
-            CONST_FOUND=$(grep -c "store.*constant" "$ll_file" 2>/dev/null || echo 0)
-            LOAD_FOUND=$(grep -c "load.*specialization" "$ll_file" 2>/dev/null || echo 0)
+            CONST_FOUND=$(grep -c "store.*constant" "$ll_file" 2>/dev/null || echo "0")
+            LOAD_FOUND=$(grep -c "load.*specialization" "$ll_file" 2>/dev/null || echo "0")
 
             echo "    - Constant stores: $CONST_FOUND"
             echo "    - Specialization loads: $LOAD_FOUND"
 
-            if [ $CONST_FOUND -gt 0 ] || [ $LOAD_FOUND -eq 0 ]; then
+            if [ "$CONST_FOUND" -gt 0 ] 2>/dev/null || [ "$LOAD_FOUND" -eq 0 ] 2>/dev/null; then
                 echo "    ✓ Evidence of constant propagation"
             fi
         fi
@@ -196,6 +210,7 @@ int main() {
       data[it.get_id(0)] = result;
     });
 
+  q.wait();
   bool correct = (data[0] == 198);
   sycl::free(data, q);
   return correct ? 0 : 1;
@@ -244,29 +259,39 @@ echo ""
 PASSED=0
 FAILED=0
 
+# Prepare machine-readable summary
+SUMMARY_FILE="summary.txt"
+> "$SUMMARY_FILE"
+
 # Check each validation criterion
 if [ $INLINE_COUNT -gt 0 ]; then
     echo "✓ Compiler inlining: CONFIRMED ($INLINE_COUNT inline operations)"
-    ((PASSED++))
+    echo "Compiler inlining: PASS ($INLINE_COUNT inline operations)" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "✗ Compiler inlining: NOT CONFIRMED"
-    ((FAILED++))
+    echo "Compiler inlining: FAIL" >> "$SUMMARY_FILE"
+    FAILED=$((FAILED+1))
 fi
 
 if [ $TEST_RESULT -eq 0 ]; then
     echo "✓ Runtime validation: PASSED"
-    ((PASSED++))
+    echo "Runtime validation: PASS" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "✗ Runtime validation: FAILED"
-    ((FAILED++))
+    echo "Runtime validation: FAIL" >> "$SUMMARY_FILE"
+    FAILED=$((FAILED+1))
 fi
 
 if [ ! -z "$SPEC_INLINE" ]; then
     echo "✓ Specialization constant optimization: CONFIRMED"
-    ((PASSED++))
+    echo "Spec constant optimization: CONFIRMED" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 else
     echo "⚠ Specialization constant optimization: INFERRED (not directly confirmed)"
-    ((PASSED++))
+    echo "Spec constant optimization: INFERRED" >> "$SUMMARY_FILE"
+    PASSED=$((PASSED+1))
 fi
 
 echo ""
@@ -298,4 +323,28 @@ echo ""
 echo "=============================================="
 
 cd ..
+
+# Run performance benchmarks if validation passed
+if [ $EXIT_CODE -eq 0 ]; then
+    echo ""
+    echo "=============================================="
+    echo "Step 7: Performance Benchmarks (JIT vs AOT)"
+    echo "=============================================="
+    echo ""
+    echo "Running performance benchmarks to validate constant folding..."
+    echo ""
+
+    ./run-benchmark-intel-comparison.sh
+    BENCHMARK_EXIT=$?
+
+    if [ $BENCHMARK_EXIT -eq 0 ]; then
+        echo ""
+        echo "✓ Performance benchmarks PASSED"
+    else
+        echo ""
+        echo "✗ Performance benchmarks FAILED"
+        EXIT_CODE=1
+    fi
+fi
+
 exit $EXIT_CODE
