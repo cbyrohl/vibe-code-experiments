@@ -10,7 +10,7 @@ Repository for various vibe coded experiments.
 
 | Name                | Folder                 | Status |
 |---------------------|------------------------|:------:|
-| SYCL JIT Constants  | `sycl-jit-constants/`  | 🟡 |
+| SYCL JIT Constants  | [sycl-jit-constants/](sycl-jit-constants/)  | 🟡 |
 
 Status legend:
 - 🗒️: placeholder
@@ -18,23 +18,10 @@ Status legend:
 - 🟡: potentially successful (needs human evaluation)
 - ✅: successful (with human evaluation)
 
-## Quick Start
+## Running Experiments
 
-### SYCL JIT Constants
-
-Run complete build, test, and validation workflow:
-
-```bash
-cd sycl-jit-constants
-./run-all.sh
-```
-
-This automatically:
-- Detects available SYCL implementations (Intel oneAPI/AdaptiveCpp)
-- Builds with optimization flags
-- Runs validation tests
-- Verifies compiler optimizations (inlining, constant propagation, dead code elimination)
-- Generates detailed reports in `validate-*/` directories
+- Most experiment folders provide a `run_all.sh` script that builds and runs the experiment end-to-end. Enter the experiment directory and execute `./run_all.sh`.
+- Some experiments may include a human-written `EVALUATION.md` (or `evaluation.md`) summarizing the project and its results.
 
 ## Usage
 
